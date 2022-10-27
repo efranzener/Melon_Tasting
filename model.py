@@ -1,7 +1,7 @@
 """ Model for Melon Tasting Reservation """
 
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 db = SQLAlchemy()
@@ -16,6 +16,7 @@ class User(db.Model):
     name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
     username = db.Column(db.String, nullable=False, unique=True)
+    password = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now())
     
 
@@ -34,7 +35,7 @@ class Reservation(db.Model):
     reservation_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.user_id")) 
     date = db.Column(db.DateTime, default=datetime.today(), nullable=False)
-    time = db.Column(db.String, nullable=False)
+    time = db.Column(db.String, default=(datetime.now() + (datetime.min - datetime.now()) % timedelta(minutes=30)).strftime("%I:%M %p"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now())
 
     user = db.relationship("User", backref="reservations")
@@ -43,8 +44,28 @@ class Reservation(db.Model):
     def __repr__(self):
         return f"<User user_id={self.user_id} date={self.date}>"
  
+def test_data():
+    """create some test data"""
 
-def connect_to_db(app, db_uri="postgresql:///melon_tasting", echo=True):
+    User.query.delete()
+    Reservation.query.delete()
+
+    user1 = User(name="Marcio Januario", email="jmarcio@test.com", username="jmarcio", password="JankshT1G")
+    user2 = User(name="Marcela Oliveira", email="omarcela@test.com", username="omarcela", password="JKlnaksJ234?")
+    
+    db.session.add_all([user1, user2])
+    db.session.commit()
+
+    
+    reservation1 = Reservation(user_id=1)
+    
+    reservation2 = Reservation(user_id=2)
+
+    db.session.add_all([reservation1, reservation2])
+    db.session.commit()
+
+
+def connect_to_db(app, db_uri="postgresql:///melon_tasting", echo=False):
     """Connect to database."""
     
 

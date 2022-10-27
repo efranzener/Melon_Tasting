@@ -21,6 +21,9 @@ print("connected to db")
 with server.app.app_context():
     model.db.create_all()
 
+#set start and end dates for the random datetime   
+start = datetime.now()+ timedelta(days=1)
+end = datetime.now() + timedelta(days=30)
 
 def create_random_datetime(start, end):
     """pick a random datetime"""  
@@ -29,50 +32,54 @@ def create_random_datetime(start, end):
     random_number = random.randrange(interval_days.days * 24 * 60 * 60)    
     
     random_datetime = start + timedelta(seconds=random_number)
-    print("im the random daytime", random_datetime)
+
+    #check if random datetime is in the hour or hours and half mark, and if not it rounds it to be
     if random_datetime.minute > 0:
+
         random_datetime = random_datetime + (datetime.min - random_datetime) % timedelta(minutes=30)
-    
+
     return random_datetime 
    
-    
-start = datetime.now()+ timedelta(days=1)
-end = datetime.now() + timedelta(days=30)
-# date = create_random_datetime( start, end)
 
 users_in_db=[]
-for n in range(6):
-    with server.app.app_context():  
+def create_users():
+    """create sample users"""
 
-        name = fake.name()
+    for n in range(6):
+
+        with server.app.app_context():  
+
+            name = fake.name()
+            splitted_name = name.split(" ")
+            fname=splitted_name[0].strip()
+            lname= splitted_name[1].strip()
+            email= fname.lower()+f"{n}@test.com"
+            username=fname[1] + lname.lower()
+            password=fake.password()
+            user = crud.create_user(name=name, email=email, username=username, password=password)
+            
+            model.db.session.add(user)
+            model.db.session.commit()
+
+def create_reservations():
+    """create sample reservations""" 
+
+    for n in range(1,6): 
         
-        splitted_name = name.split(" ")
-        fname=splitted_name[0].strip()
-        lname= splitted_name[1].strip()
+        with server.app.app_context(): 
         
-        email= fname.lower()+f"{n}@test.com"
-        username=fname[1] + lname.lower()
-        # with server.app.app_context():  
-        user = crud.create_user(name=name, email=email, username=username)
-        
-        model.db.session.add(user)
-        model.db.session.commit()   
+            # user_id = n
+            date=create_random_datetime( start, end)
+            time_string = date.strftime("%I:%M %p")
+            if crud.check_availability_by_datetime(date, time_string):
+                date = create_random_datetime( start, end)
+                time_string = date.strftime("%I:%M %p")
 
-        print("im the user", user, "and my id", user.user_id)
-        
-for n in range(1,6):  
-    with server.app.app_context():  
-        user_id = n
-        date=create_random_datetime( start, end)
-        time_string= date.strftime("%I:%M %p")
-        reservation = crud.create_reservation(user_id=n, date=date, time = time_string)
-        model.db.session.add(reservation)
-        model.db.session.commit()   
+            reservation = crud.create_reservation(user_id=n, date=date, time = time_string)
 
-    
+            model.db.session.add(reservation)
+            model.db.session.commit()   
 
-# model.db.session.add_all([reservation1, reservation2])
-# model.db.session.commit()
 
-print("Connected to the db!")
-
+create_users()
+create_reservations()
